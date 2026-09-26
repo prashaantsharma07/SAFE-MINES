@@ -2,6 +2,7 @@ package com.mine.governance
 
 import android.app.Application
 import com.mine.governance.data.local.MineDatabase
+import com.mine.governance.data.location.LocationHelper
 import com.mine.governance.data.repository.AuthRepository
 import com.mine.governance.data.repository.EmergencyRepository
 import com.mine.governance.data.repository.SyncRepository
@@ -23,11 +24,16 @@ class MineApplication : Application() {
         NetworkMonitor(this)
     }
 
+    val locationHelper by lazy {
+        LocationHelper(this)
+    }
+
     val syncRepository by lazy {
         SyncRepository(
             syncQueueDao = database.syncQueueDao(),
             emergencyDao = database.emergencyDao(),
-            taskDao = database.taskDao()
+            taskDao = database.taskDao(),
+            networkMonitor = networkMonitor
         )
     }
 

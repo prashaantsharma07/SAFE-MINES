@@ -12,12 +12,15 @@ data class AiRiskAssessment(
     val requiresEvacuationAlarm: Boolean
 )
 
+/**
+ * DGMS-Compliant Safety Risk Calculation Matrix
+ *
+ * NOTE: This is a deterministic, explainable risk weighting formula aligned with
+ * Directorate General of Mines Safety (DGMS) Coal Mines Regulations (CMR),
+ * taking into account hazard explosibility, worker exposure count, and sector depth.
+ */
 object AiRiskEngine {
 
-    /**
-     * Evaluates real-time AI Risk score based on subterranean parameters,
-     * hazard coefficients, worker exposure, and atmospheric threat level.
-     */
     fun evaluateEmergencyRisk(
         type: EmergencyType,
         severity: Severity,
@@ -28,7 +31,7 @@ object AiRiskEngine {
         val hazardWeight = when (type) {
             EmergencyType.GAS_LEAKAGE -> 1.00 // Explosive Methane (CH4) or Toxic CO
             EmergencyType.FIRE -> 0.95
-            EmergencyType.GROUND_INSTABILITY -> 0.90 // Roof fall risk
+            EmergencyType.GROUND_INSTABILITY -> 0.90 // Roof fall / strata failure risk
             EmergencyType.VENTILATION_FAILURE -> 0.85 // Asphyxiation hazard
             EmergencyType.WORKER_INJURY -> 0.70
             EmergencyType.EQUIPMENT_FAILURE -> 0.60
@@ -76,19 +79,19 @@ object AiRiskEngine {
         }
 
         val rationale = buildString {
-            append("AI Assessment triggered by ${type.displayName}. ")
+            append("DGMS Risk Assessment triggered by ${type.displayName}. ")
             if (affectedPersonnel > 0) {
                 append("$affectedPersonnel miners potentially in hazard radius. ")
             }
             if (sectorRisk > 0.8) {
-                append("Deep subterranean sector ($sector) exhibits amplified risk factors.")
+                append("Deep subterranean sector ($sector) exhibits amplified strata risk factors.")
             }
         }
 
         val action = when (finalLevel) {
-            Severity.CRITICAL -> "IMMEDIATE EVACUATION of Sector $sector. Trigger automated blast doors & emergency siren."
-            Severity.HIGH -> "Halt heavy machinery operations immediately. Dispatch Rapid Response Team."
-            Severity.MEDIUM -> "Inspect localized isolation dampers. Dispatch specialized maintenance crew."
+            Severity.CRITICAL -> "IMMEDIATE EVACUATION of Sector $sector. Initiate manual evacuation protocol, sound emergency horn, and seal zone per DGMS site SOP."
+            Severity.HIGH -> "Halt extraction machinery immediately. Dispatch Shift Overman and Rapid Response Team."
+            Severity.MEDIUM -> "Inspect localized isolation dampers. Dispatch specialized mechanical crew."
             Severity.LOW -> "Log in shift supervisor record. Schedule standard safety verification."
         }
 

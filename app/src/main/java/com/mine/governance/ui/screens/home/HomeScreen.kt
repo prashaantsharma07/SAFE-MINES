@@ -19,7 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Assignment
+import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Notifications
@@ -180,7 +180,7 @@ fun HomeScreen(
                     primaryValue = "${uiState.activeTasksCount}",
                     subLabel = "Critical",
                     subValue = "${uiState.criticalTasksCount}",
-                    icon = Icons.Default.Assignment,
+                    icon = Icons.AutoMirrored.Filled.Assignment,
                     accentColor = ImperialGold,
                     subValueColor = EmergencyCrimson,
                     modifier = Modifier.weight(1f),
@@ -265,7 +265,7 @@ fun HomeScreen(
                     subtitle = "View, execute and submit proof for mine tasks",
                     borderBrush = Brush.linearGradient(listOf(ImperialGold.copy(0.4f), Color.White.copy(0.1f))),
                     iconTint = ImperialGold,
-                    icon = Icons.Default.Assignment,
+                    icon = Icons.AutoMirrored.Filled.Assignment,
                     onClick = onNavigateToTasks
                 )
             }

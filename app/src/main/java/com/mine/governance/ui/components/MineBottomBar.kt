@@ -14,7 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Assignment
+import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Map
@@ -36,11 +36,12 @@ import com.mine.governance.ui.theme.CyberCyan
 import com.mine.governance.ui.theme.ImperialGold
 import com.mine.governance.ui.theme.TextMuted
 import com.mine.governance.ui.theme.TextSecondary
+import com.mine.governance.ui.theme.WarmActiveBeige
 
 enum class NavItem(val label: String, val icon: ImageVector) {
     HOME("Home", Icons.Default.Home),
     REPORTS("Reports", Icons.Default.Description),
-    TASKS("Tasks", Icons.Default.Assignment),
+    TASKS("Tasks", Icons.AutoMirrored.Filled.Assignment),
     MAP("Mine Map", Icons.Default.Map),
     PROFILE("Profile", Icons.Default.Person)
 }
@@ -88,22 +89,22 @@ fun MineBottomBar(
                     Icon(
                         imageVector = item.icon,
                         contentDescription = item.label,
-                        tint = if (isSelected) ImperialGold else TextSecondary,
+                        tint = if (isSelected) WarmActiveBeige else TextSecondary,
                         modifier = Modifier.size(22.dp)
                     )
                     Text(
                         text = item.label,
                         fontSize = 10.sp,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                        color = if (isSelected) ImperialGold else TextMuted
+                        color = if (isSelected) WarmActiveBeige else TextMuted
                     )
                     if (isSelected) {
                         Box(
                             modifier = Modifier
-                                .padding(top = 2.dp)
+                                .padding(top = 3.dp)
                                 .size(4.dp)
                                 .clip(CircleShape)
-                                .background(CyberCyan)
+                                .background(WarmActiveBeige)
                         )
                     }
                 }

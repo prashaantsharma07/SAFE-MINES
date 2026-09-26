@@ -1,5 +1,9 @@
 package com.mine.governance.ui.screens.emergency
 
+import android.Manifest
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -22,15 +26,17 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -40,36 +46,40 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import com.mine.governance.data.camera.CameraHelper
+import com.mine.governance.data.location.LocationStatus
 import com.mine.governance.domain.model.EmergencyType
-import com.mine.governance.domain.model.NetworkMode
 import com.mine.governance.domain.model.Severity
 import com.mine.governance.ui.components.GlassCard
 import com.mine.governance.ui.components.GlassEmergencyButton
-import com.mine.governance.ui.components.GlassGoldButton
 import com.mine.governance.ui.components.GlassTextField
-import com.mine.governance.ui.components.crimsonSosPulse
 import com.mine.governance.ui.components.glassEffect
 import com.mine.governance.ui.theme.CavernDark
-import com.mine.governance.ui.theme.ComplianceGreen
-import com.mine.governance.ui.theme.CyberCyan
-import com.mine.governance.ui.theme.DarkGlassBackgroundBrush
+import com.mine.governance.ui.theme.CriticalRed
+import com.mine.governance.ui.theme.DarkCanvas
+import com.mine.governance.ui.theme.DeepWarmStone
+import com.mine.governance.ui.theme.DividerBorderDark
 import com.mine.governance.ui.theme.EmergencyCrimson
-import com.mine.governance.ui.theme.EmergencyFireBrush
-import com.mine.governance.ui.theme.HazardOrange
-import com.mine.governance.ui.theme.ImperialGold
-import com.mine.governance.ui.theme.MethaneYellow
-import com.mine.governance.ui.theme.ObsidianBlack
+import com.mine.governance.ui.theme.OperationalGreen
+import com.mine.governance.ui.theme.SubPanelDark
 import com.mine.governance.ui.theme.TextMuted
 import com.mine.governance.ui.theme.TextPrimary
 import com.mine.governance.ui.theme.TextSecondary
+import com.mine.governance.ui.theme.WarmActiveBeige
+import com.mine.governance.ui.theme.WarningOrange
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -79,11 +89,42 @@ fun EmergencyReportScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    var currentPhotoUri by remember { mutableStateOf<Uri?>(null) }
+
+    val takePictureLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success && currentPhotoUri != null) {
+            viewModel.addEvidencePhoto(currentPhotoUri.toString())
+        }
+    }
+
+    val pickImageLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            val savedPath = CameraHelper.saveContentUriToEvidenceFile(context, uri)
+            viewModel.addEvidencePhoto(savedPath ?: uri.toString())
+        }
+    }
+
+    val requestLocationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val fineGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true
+        val coarseGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        if (fineGranted || coarseGranted) {
+            viewModel.requestRealLocation()
+        } else {
+            viewModel.onLocationPermissionDenied()
+        }
+    }
 
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(DarkGlassBackgroundBrush)
+            .background(DeepWarmStone)
     ) {
         Column(
             modifier = Modifier
@@ -103,13 +144,13 @@ fun EmergencyReportScreen(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(CavernDark.copy(alpha = 0.8f))
-                        .border(1.dp, ImperialGold.copy(alpha = 0.4f), CircleShape)
+                        .background(DarkCanvas)
+                        .border(1.dp, DividerBorderDark, CircleShape)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.ArrowBack,
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = ImperialGold
+                        tint = WarmActiveBeige
                     )
                 }
 
@@ -120,11 +161,11 @@ fun EmergencyReportScreen(
                         text = "EMERGENCY REPORT",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        color = EmergencyCrimson,
+                        color = CriticalRed,
                         letterSpacing = 1.sp
                     )
                     Text(
-                        text = "Priority 1 • Immediate Subterranean Incident Broadcast",
+                        text = "Priority 1 • Subterranean Hazard Alert",
                         fontSize = 11.sp,
                         color = TextSecondary
                     )
@@ -138,8 +179,8 @@ fun EmergencyReportScreen(
                 modifier = Modifier.fillMaxWidth(),
                 borderBrush = Brush.linearGradient(
                     listOf(
-                        if (uiState.dynamicAiRisk.score >= 80) EmergencyCrimson else ImperialGold,
-                        CyberCyan
+                        if (uiState.dynamicAiRisk.score >= 80) CriticalRed else WarmActiveBeige,
+                        DividerBorderDark
                     )
                 ),
                 contentPadding = 14.dp
@@ -152,7 +193,7 @@ fun EmergencyReportScreen(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = "🤖 Edge AI Risk Score:",
+                                text = "⚡ DGMS Risk Score:",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = TextPrimary
@@ -162,32 +203,22 @@ fun EmergencyReportScreen(
                                 text = "${uiState.dynamicAiRisk.score}/100",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = if (uiState.dynamicAiRisk.score >= 80) EmergencyCrimson else ImperialGold
+                                color = if (uiState.dynamicAiRisk.score >= 80) CriticalRed else WarmActiveBeige
                             )
                         }
 
                         // Severity Tag
+                        val sevColor = when (uiState.dynamicAiRisk.riskLevel) {
+                            Severity.CRITICAL -> CriticalRed
+                            Severity.HIGH -> WarningOrange
+                            Severity.MEDIUM -> WarningOrange
+                            Severity.LOW -> OperationalGreen
+                        }
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
-                                .background(
-                                    when (uiState.dynamicAiRisk.riskLevel) {
-                                        Severity.CRITICAL -> EmergencyCrimson.copy(alpha = 0.25f)
-                                        Severity.HIGH -> HazardOrange.copy(alpha = 0.25f)
-                                        Severity.MEDIUM -> MethaneYellow.copy(alpha = 0.25f)
-                                        Severity.LOW -> ComplianceGreen.copy(alpha = 0.25f)
-                                    }
-                                )
-                                .border(
-                                    1.dp,
-                                    when (uiState.dynamicAiRisk.riskLevel) {
-                                        Severity.CRITICAL -> EmergencyCrimson
-                                        Severity.HIGH -> HazardOrange
-                                        Severity.MEDIUM -> MethaneYellow
-                                        Severity.LOW -> ComplianceGreen
-                                    },
-                                    RoundedCornerShape(6.dp)
-                                )
+                                .background(sevColor.copy(alpha = 0.25f))
+                                .border(1.dp, sevColor, RoundedCornerShape(6.dp))
                                 .padding(horizontal = 8.dp, vertical = 2.dp)
                         ) {
                             Text(
@@ -204,7 +235,7 @@ fun EmergencyReportScreen(
                         text = uiState.dynamicAiRisk.recommendedImmediateAction,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
-                        color = ImperialGold
+                        color = WarmActiveBeige
                     )
                 }
             }
@@ -227,18 +258,17 @@ fun EmergencyReportScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                EmergencyType.values().forEach { type ->
+                EmergencyType.entries.forEach { type ->
                     val isSelected = uiState.selectedType == type
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(10.dp))
                             .background(
-                                if (isSelected) ImperialGold.copy(alpha = 0.2f) else CavernDark.copy(alpha = 0.7f)
+                                if (isSelected) WarmActiveBeige.copy(alpha = 0.2f) else DarkCanvas
                             )
                             .border(
                                 width = if (isSelected) 1.5.dp else 1.dp,
-                                brush = if (isSelected) Brush.linearGradient(listOf(ImperialGold, CyberCyan))
-                                else Brush.linearGradient(listOf(Color.White.copy(0.1f), Color.Transparent)),
+                                color = if (isSelected) WarmActiveBeige else DividerBorderDark,
                                 shape = RoundedCornerShape(10.dp)
                             )
                             .clickable { viewModel.selectType(type) }
@@ -248,7 +278,7 @@ fun EmergencyReportScreen(
                             text = type.displayName,
                             fontSize = 12.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isSelected) ImperialGold else TextSecondary
+                            color = if (isSelected) WarmActiveBeige else TextSecondary
                         )
                     }
                 }
@@ -271,23 +301,23 @@ fun EmergencyReportScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Severity.values().forEach { severity ->
+                Severity.entries.forEach { severity ->
                     val isSelected = uiState.selectedSeverity == severity
                     val severityColor = when (severity) {
-                        Severity.CRITICAL -> EmergencyCrimson
-                        Severity.HIGH -> HazardOrange
-                        Severity.MEDIUM -> MethaneYellow
-                        Severity.LOW -> ComplianceGreen
+                        Severity.CRITICAL -> CriticalRed
+                        Severity.HIGH -> WarningOrange
+                        Severity.MEDIUM -> WarningOrange
+                        Severity.LOW -> OperationalGreen
                     }
 
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(if (isSelected) severityColor.copy(alpha = 0.25f) else CavernDark)
+                            .background(if (isSelected) severityColor.copy(alpha = 0.25f) else DarkCanvas)
                             .border(
                                 width = if (isSelected) 1.5.dp else 1.dp,
-                                color = if (isSelected) severityColor else Color.White.copy(0.1f),
+                                color = if (isSelected) severityColor else DividerBorderDark,
                                 shape = RoundedCornerShape(10.dp)
                             )
                             .clickable { viewModel.selectSeverity(severity) }
@@ -377,17 +407,17 @@ fun EmergencyReportScreen(
                         modifier = Modifier
                             .size(34.dp)
                             .clip(CircleShape)
-                            .background(CavernDark)
-                            .border(1.dp, CyberCyan.copy(alpha = 0.5f), CircleShape)
+                            .background(DarkCanvas)
+                            .border(1.dp, DividerBorderDark, CircleShape)
                     ) {
-                        Icon(imageVector = Icons.Default.Remove, contentDescription = "Decrease", tint = CyberCyan)
+                        Icon(imageVector = Icons.Default.Remove, contentDescription = "Decrease", tint = WarmActiveBeige)
                     }
 
                     Text(
                         text = "${uiState.affectedPersonnel}",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        color = ImperialGold,
+                        color = WarmActiveBeige,
                         modifier = Modifier.padding(horizontal = 14.dp)
                     )
 
@@ -396,46 +426,89 @@ fun EmergencyReportScreen(
                         modifier = Modifier
                             .size(34.dp)
                             .clip(CircleShape)
-                            .background(CavernDark)
-                            .border(1.dp, EmergencyCrimson.copy(alpha = 0.6f), CircleShape)
+                            .background(DarkCanvas)
+                            .border(1.dp, CriticalRed.copy(alpha = 0.6f), CircleShape)
                     ) {
-                        Icon(imageVector = Icons.Default.Add, contentDescription = "Increase", tint = EmergencyCrimson)
+                        Icon(imageVector = Icons.Default.Add, contentDescription = "Increase", tint = CriticalRed)
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(18.dp))
 
-            // Section 4: Automatic Telemetry Capture Card
-            Text(
-                text = "4. AUTOMATIC TELEMETRY CAPTURE",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextSecondary,
-                letterSpacing = 1.sp
-            )
+            // Section 4: Telemetry & Location Card
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "4. TELEMETRY & GPS POSITION",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextSecondary,
+                    letterSpacing = 1.sp
+                )
+
+                // Refresh Location button
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(SubPanelDark)
+                        .clickable {
+                            requestLocationPermissionLauncher.launch(
+                                arrayOf(
+                                    Manifest.permission.ACCESS_FINE_LOCATION,
+                                    Manifest.permission.ACCESS_COARSE_LOCATION
+                                )
+                            )
+                        }
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.MyLocation, contentDescription = null, tint = WarmActiveBeige, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(text = "Acquire GPS", fontSize = 11.sp, color = WarmActiveBeige)
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
 
             GlassCard(
                 modifier = Modifier.fillMaxWidth(),
-                borderBrush = Brush.linearGradient(listOf(CyberCyan.copy(0.4f), Color.White.copy(0.1f))),
                 contentPadding = 12.dp
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.GpsFixed, contentDescription = null, tint = CyberCyan, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.GpsFixed, contentDescription = null, tint = WarmActiveBeige, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "GPS: ${uiState.latitude}° N, ${uiState.longitude}° E",
+                            text = String.format("GPS: %.4f° N, %.4f° E", uiState.latitude, uiState.longitude),
                             fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
                             color = TextPrimary
                         )
                     }
+
+                    if (uiState.isSubterraneanLocationFallback) {
+                        Text(
+                            text = "Signal: Underground strata fallback (Shaft 4 Surveyed Pithead)",
+                            fontSize = 11.sp,
+                            color = WarningOrange
+                        )
+                    } else if (uiState.accuracyMeters > 0) {
+                        Text(
+                            text = "Signal: Real satellite lock (Accuracy: ±${uiState.accuracyMeters.toInt()}m)",
+                            fontSize = 11.sp,
+                            color = OperationalGreen
+                        )
+                    }
+
                     Text(
-                        text = "Mine Location: ${uiState.mineSector}",
+                        text = "Sector: ${uiState.mineSector}",
                         fontSize = 12.sp,
-                        color = ImperialGold
+                        color = WarmActiveBeige
                     )
                     Text(
                         text = "Reporting Officer: ${uiState.reportingOfficerName} (${uiState.reportingOfficerId})",
@@ -447,9 +520,9 @@ fun EmergencyReportScreen(
 
             Spacer(modifier = Modifier.height(18.dp))
 
-            // Section 5: Evidence Capture
+            // Section 5: Real Evidence Capture
             Text(
-                text = "5. EVIDENCE CAPTURE (${uiState.capturedEvidenceCount} ATTACHED)",
+                text = "5. EVIDENCE CAPTURE (${uiState.capturedEvidenceUris.size} ATTACHED)",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextSecondary,
@@ -462,57 +535,78 @@ fun EmergencyReportScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // Photo button
+                // Real Camera Button
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(CavernDark)
-                        .border(1.dp, CyberCyan.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
-                        .clickable { viewModel.addSimulatedEvidence() }
+                        .background(DarkCanvas)
+                        .border(1.dp, DividerBorderDark, RoundedCornerShape(10.dp))
+                        .clickable {
+                            val (uri, _) = CameraHelper.createEvidencePhotoUri(context)
+                            currentPhotoUri = uri
+                            takePictureLauncher.launch(uri)
+                        }
                         .padding(vertical = 12.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.CameraAlt, contentDescription = null, tint = CyberCyan, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.CameraAlt, contentDescription = null, tint = WarmActiveBeige, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = "Photo", fontSize = 12.sp, color = TextPrimary)
+                        Text(text = "Camera", fontSize = 13.sp, color = TextPrimary, fontWeight = FontWeight.Medium)
                     }
                 }
 
-                // Video button
+                // Gallery Button
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(CavernDark)
-                        .border(1.dp, CyberCyan.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
-                        .clickable { viewModel.addSimulatedEvidence() }
+                        .background(DarkCanvas)
+                        .border(1.dp, DividerBorderDark, RoundedCornerShape(10.dp))
+                        .clickable {
+                            pickImageLauncher.launch("image/*")
+                        }
                         .padding(vertical = 12.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Videocam, contentDescription = null, tint = CyberCyan, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, tint = WarmActiveBeige, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = "Video", fontSize = 12.sp, color = TextPrimary)
+                        Text(text = "Gallery", fontSize = 13.sp, color = TextPrimary, fontWeight = FontWeight.Medium)
                     }
                 }
+            }
 
-                // Audio Note
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(CavernDark)
-                        .border(1.dp, ImperialGold.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
-                        .clickable { viewModel.addSimulatedEvidence() }
-                        .padding(vertical = 12.dp),
-                    contentAlignment = Alignment.Center
+            // Thumbnail list
+            if (uiState.capturedEvidenceUris.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Mic, contentDescription = null, tint = ImperialGold, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = "Audio", fontSize = 12.sp, color = TextPrimary)
+                    uiState.capturedEvidenceUris.forEachIndexed { index, uriStr ->
+                        Box(
+                            modifier = Modifier
+                                .size(70.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .border(1.dp, DividerBorderDark, RoundedCornerShape(8.dp))
+                        ) {
+                            AsyncImage(
+                                model = uriStr,
+                                contentDescription = "Evidence thumbnail",
+                                modifier = Modifier.fillMaxSize()
+                            )
+                            IconButton(
+                                onClick = { viewModel.removeEvidence(index) },
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .size(22.dp)
+                                    .background(Color.Black.copy(alpha = 0.7f), CircleShape)
+                            ) {
+                                Icon(Icons.Default.Close, contentDescription = "Delete", tint = Color.White, modifier = Modifier.size(14.dp))
+                            }
+                        }
                     }
                 }
             }
@@ -533,11 +627,11 @@ fun EmergencyReportScreen(
         if (uiState.showSuccessDialog) {
             AlertDialog(
                 onDismissRequest = { viewModel.dismissSuccessDialog() },
-                containerColor = CavernDark,
+                containerColor = DarkCanvas,
                 shape = RoundedCornerShape(16.dp),
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = ComplianceGreen)
+                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = OperationalGreen)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(text = "Emergency Broadcast Logged", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     }
@@ -546,21 +640,21 @@ fun EmergencyReportScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
                             text = "Incident ID: ${uiState.submissionResult?.report?.id}",
-                            color = ImperialGold,
+                            color = WarmActiveBeige,
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp
                         )
                         Text(
-                            text = "AI Risk Priority: Priority 1 (Score: ${uiState.submissionResult?.riskAssessment?.score}/100)",
-                            color = EmergencyCrimson,
+                            text = "DGMS Risk Priority: Priority 1 (Score: ${uiState.submissionResult?.riskAssessment?.score}/100)",
+                            color = CriticalRed,
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 13.sp
                         )
                         Text(
                             text = if (uiState.submissionResult?.wasQueuedOffline == true) {
-                                "Case 3: Stored securely in local SQLite outbox queue. Marked Priority 1 for immediate dispatch on network/gateway reconnection."
+                                "Stored securely in local SQLite outbox queue. Marked Priority 1 for immediate dispatch on network/gateway reconnection."
                             } else {
-                                "Case 1: Transmitted to Central Mine Server. Manager dashboard alert notification triggered."
+                                "Transmitted to Central Mine Server. Manager dashboard alert notification triggered."
                             },
                             color = TextSecondary,
                             fontSize = 12.sp
@@ -572,7 +666,7 @@ fun EmergencyReportScreen(
                         viewModel.dismissSuccessDialog()
                         onNavigateBack()
                     }) {
-                        Text(text = "Acknowledge & Return", color = ImperialGold, fontWeight = FontWeight.Bold)
+                        Text(text = "Acknowledge & Return", color = WarmActiveBeige, fontWeight = FontWeight.Bold)
                     }
                 }
             )

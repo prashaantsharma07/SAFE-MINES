@@ -20,59 +20,60 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.mine.governance.ui.theme.EmergencyCrimson
-import com.mine.governance.ui.theme.SafeMinesBlack
-import com.mine.governance.ui.theme.SafeMinesDarkGreen
-import com.mine.governance.ui.theme.SafeMinesOliveGreen
-import com.mine.governance.ui.theme.SafeMinesYellow
+import com.mine.governance.ui.theme.CriticalRed
+import com.mine.governance.ui.theme.DarkCanvas
+import com.mine.governance.ui.theme.DeepWarmStone
+import com.mine.governance.ui.theme.DividerBorderDark
+import com.mine.governance.ui.theme.SubPanelDark
+import com.mine.governance.ui.theme.WarmActiveBeige
 
 /**
- * Applies a frosted Glassmorphism surface effect to any Composable.
- * Updated for SafeMines branding.
+ * Applies an industrial frosted panel surface effect.
+ * Uses layered dark canvas translucency, subtle specular highlights,
+ * and warm active beige/stone hairline borders.
  */
 fun Modifier.glassEffect(
     shape: Shape = RoundedCornerShape(16.dp),
-    blurRadius: Float = 25f,
     borderWidth: Dp = 1.dp,
     borderBrush: Brush = Brush.linearGradient(
         colors = listOf(
-            SafeMinesYellow.copy(alpha = 0.50f),
-            SafeMinesOliveGreen.copy(alpha = 0.30f),
-            Color.White.copy(alpha = 0.08f)
+            WarmActiveBeige.copy(alpha = 0.35f),
+            DividerBorderDark.copy(alpha = 0.60f),
+            Color.White.copy(alpha = 0.04f)
         )
     ),
-    surfaceTint: Color = SafeMinesDarkGreen.copy(alpha = 0.72f),
-    elevation: Dp = 8.dp
+    surfaceTint: Color = DarkCanvas.copy(alpha = 0.85f),
+    elevation: Dp = 6.dp
 ): Modifier = this
     .shadow(
         elevation = elevation,
         shape = shape,
         ambientColor = Color.Black.copy(alpha = 0.6f),
-        spotColor = SafeMinesOliveGreen.copy(alpha = 0.2f)
+        spotColor = WarmActiveBeige.copy(alpha = 0.08f)
     )
     .clip(shape)
-    // Specular highlight layer
+    // Subtle top specular edge highlight
     .drawBehind {
         drawRect(
             brush = Brush.verticalGradient(
                 colors = listOf(
-                    Color.White.copy(alpha = 0.10f),
-                    Color.White.copy(alpha = 0.03f),
+                    Color.White.copy(alpha = 0.06f),
+                    Color.White.copy(alpha = 0.01f),
                     Color.Transparent
                 )
             )
         )
     }
-    // Translucent dark glass surface tint
+    // Deep stone / dark canvas surface background
     .background(
         brush = Brush.verticalGradient(
             colors = listOf(
                 surfaceTint,
-                SafeMinesBlack.copy(alpha = 0.78f)
+                DeepWarmStone.copy(alpha = 0.90f)
             )
         )
     )
-    // Dual-tone gradient hairline border
+    // Industrial hairline border
     .border(
         width = borderWidth,
         brush = borderBrush,
@@ -80,7 +81,7 @@ fun Modifier.glassEffect(
     )
 
 /**
- * Pulsating SOS emergency glow modifier for critical alerts in dark mine environments.
+ * Pulsating SOS emergency glow modifier for critical alerts in mine environments.
  */
 @Composable
 fun Modifier.crimsonSosPulse(
@@ -101,15 +102,15 @@ fun Modifier.crimsonSosPulse(
         .shadow(
             elevation = (16 * alphaAnim).dp,
             shape = shape,
-            ambientColor = EmergencyCrimson,
-            spotColor = EmergencyCrimson.copy(alpha = alphaAnim)
+            ambientColor = CriticalRed,
+            spotColor = CriticalRed.copy(alpha = alphaAnim)
         )
         .border(
             width = (1.5).dp,
             brush = Brush.radialGradient(
                 colors = listOf(
-                    EmergencyCrimson.copy(alpha = alphaAnim),
-                    SafeMinesYellow.copy(alpha = 0.4f)
+                    CriticalRed.copy(alpha = alphaAnim),
+                    WarmActiveBeige.copy(alpha = 0.4f)
                 )
             ),
             shape = shape

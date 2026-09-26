@@ -24,8 +24,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddPhotoAlternate
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.AssignmentTurnedIn
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
@@ -71,6 +71,7 @@ import com.mine.governance.ui.theme.ObsidianBlack
 import com.mine.governance.ui.theme.TextMuted
 import com.mine.governance.ui.theme.TextPrimary
 import com.mine.governance.ui.theme.TextSecondary
+import com.mine.governance.ui.theme.WarmActiveBeige
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -112,9 +113,9 @@ fun TasksScreen(
                         .border(1.dp, ImperialGold.copy(alpha = 0.4f), CircleShape)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.ArrowBack,
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = ImperialGold
+                        tint = WarmActiveBeige
                     )
                 }
 

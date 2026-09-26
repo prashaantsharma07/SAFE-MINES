@@ -1,24 +1,10 @@
 package com.mine.governance.ui.navigation
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -32,12 +18,14 @@ import com.mine.governance.ui.screens.home.HomeScreen
 import com.mine.governance.ui.screens.home.HomeViewModel
 import com.mine.governance.ui.screens.login.LoginScreen
 import com.mine.governance.ui.screens.login.LoginViewModel
+import com.mine.governance.ui.screens.map.MineMapScreen
+import com.mine.governance.ui.screens.observations.ObservationScreen
+import com.mine.governance.ui.screens.observations.ObservationViewModel
+import com.mine.governance.ui.screens.profile.ProfileScreen
+import com.mine.governance.ui.screens.profile.ProfileViewModel
 import com.mine.governance.ui.screens.tasks.TaskViewModel
 import com.mine.governance.ui.screens.tasks.TasksScreen
-import com.mine.governance.ui.theme.DarkGlassBackgroundBrush
-import com.mine.governance.ui.theme.ImperialGold
-import com.mine.governance.ui.theme.ObsidianBlack
-import com.mine.governance.ui.theme.TextSecondary
+import com.mine.governance.ui.theme.DeepWarmStone
 
 object MineDestinations {
     const val LOGIN = "login"
@@ -55,7 +43,9 @@ fun MineAppNavHost(
     loginViewModel: LoginViewModel,
     homeViewModel: HomeViewModel,
     emergencyViewModel: EmergencyViewModel,
-    taskViewModel: TaskViewModel
+    taskViewModel: TaskViewModel,
+    observationViewModel: ObservationViewModel,
+    profileViewModel: ProfileViewModel
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route ?: MineDestinations.LOGIN
@@ -69,7 +59,7 @@ fun MineAppNavHost(
     )
 
     Scaffold(
-        containerColor = ObsidianBlack,
+        containerColor = DeepWarmStone,
         bottomBar = {
             if (showBottomBar) {
                 MineBottomBar(
@@ -136,63 +126,29 @@ fun MineAppNavHost(
             }
 
             composable(MineDestinations.REPORTS) {
-                PlaceholderGlassScreen(
-                    title = "SAFETY OBSERVATIONS & REPORTS",
-                    subtitle = "Report non-emergency safety violations, dust, ventilation, and contractor hazards.",
-                    onBack = { navController.popBackStack() }
+                ObservationScreen(
+                    viewModel = observationViewModel,
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
 
             composable(MineDestinations.MAP) {
-                PlaceholderGlassScreen(
-                    title = "GIS SUBTERRANEAN MINE MAP",
-                    subtitle = "Interactive 3D drift model with hazard clusters and active miner beacons.",
-                    onBack = { navController.popBackStack() }
+                MineMapScreen(
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
 
             composable(MineDestinations.PROFILE) {
-                PlaceholderGlassScreen(
-                    title = "OFFICER PROFILE & SETTINGS",
-                    subtitle = "Officer Rajesh Kumar • Safety Field Operations • Level 3 Compliance Authority.",
-                    onBack = { navController.popBackStack() }
+                ProfileScreen(
+                    viewModel = profileViewModel,
+                    onNavigateBack = { navController.popBackStack() },
+                    onLogoutSuccess = {
+                        navController.navigate(MineDestinations.LOGIN) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
                 )
             }
-        }
-    }
-}
-
-@Composable
-fun PlaceholderGlassScreen(
-    title: String,
-    subtitle: String,
-    onBack: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(DarkGlassBackgroundBrush)
-            .padding(24.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = title,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = ImperialGold,
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(
-                text = subtitle,
-                fontSize = 13.sp,
-                color = TextSecondary,
-                textAlign = TextAlign.Center
-            )
         }
     }
 }

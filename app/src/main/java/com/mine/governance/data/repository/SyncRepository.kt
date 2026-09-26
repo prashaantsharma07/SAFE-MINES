@@ -4,6 +4,8 @@ import com.mine.governance.data.local.dao.EmergencyDao
 import com.mine.governance.data.local.dao.SyncQueueDao
 import com.mine.governance.data.local.dao.TaskDao
 import com.mine.governance.data.local.entity.SyncQueueEntity
+import com.mine.governance.data.sync.NetworkMonitor
+import com.mine.governance.domain.model.NetworkMode
 import com.mine.governance.domain.model.SyncStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -14,13 +16,15 @@ data class SyncResult(
     val processedCount: Int,
     val successCount: Int,
     val failedCount: Int,
-    val highestPrioritySynced: Int?
+    val highestPrioritySynced: Int?,
+    val offlineDeferred: Boolean = false
 )
 
 class SyncRepository(
     private val syncQueueDao: SyncQueueDao,
     private val emergencyDao: EmergencyDao,
-    private val taskDao: TaskDao
+    private val taskDao: TaskDao,
+    private val networkMonitor: NetworkMonitor? = null
 ) {
 
     val pendingSyncCountFlow: Flow<Int> = syncQueueDao.getPendingCountFlow()
@@ -43,16 +47,32 @@ class SyncRepository(
 
     /**
      * Executes outbox dispatch strictly ordered by Priority ASC:
-     * 1: Emergency SOS
+     * 1: Emergency SOS (Subterranean Priority Alert)
      * 2: Critical Tasks & Evidence
-     * 3: Safety Observations
-     * 4: Inspections
-     * 5: Telemetry / Logs
+     * 3: Safety Observations & DGMS Reports
+     * 4: Inspections & Shift Handover
+     * 5: Telemetry / Sensor Logs
      */
-    suspend fun dispatchPendingQueue(isMeshGatewayOnly: Boolean = false): SyncResult = withContext(Dispatchers.IO) {
+    suspend fun dispatchPendingQueue(
+        isMeshGatewayOnly: Boolean = false,
+        forceOfflineSimulate: Boolean = false
+    ): SyncResult = withContext(Dispatchers.IO) {
+        val currentMode = networkMonitor?.getCurrentNetworkMode() ?: NetworkMode.OFFLINE
         val pendingItems = syncQueueDao.getPendingQueueOrderedByPriority()
+
         if (pendingItems.isEmpty()) {
-            return@withContext SyncResult(0, 0, 0, null)
+            return@withContext SyncResult(0, 0, 0, null, offlineDeferred = false)
+        }
+
+        // Honest offline check: If underground and disconnected, do not falsely claim cloud sync
+        if (currentMode == NetworkMode.OFFLINE && !forceOfflineSimulate) {
+            return@withContext SyncResult(
+                processedCount = 0,
+                successCount = 0,
+                failedCount = 0,
+                highestPrioritySynced = null,
+                offlineDeferred = true
+            )
         }
 
         var successCount = 0
@@ -63,21 +83,23 @@ class SyncRepository(
             syncQueueDao.updateStatus(item.queueId, SyncStatus.SYNCING)
 
             try {
-                // Simulate network transmission delay
-                delay(300)
+                // Gateway transmission delay simulation
+                delay(250)
 
                 // Dispatch depending on entity type
                 when (item.entityType) {
                     "EMERGENCY" -> {
-                        // Priority 1: Instant remote alert delivery
                         emergencyDao.updateSyncStatus(item.entityId, SyncStatus.SYNCED)
                     }
                     "TASK_UPDATE" -> {
-                        // Priority 2: Task status / verification delivery
-                        taskDao.updateTaskStatus(item.entityId, com.mine.governance.domain.model.TaskStatus.AWAITING_VERIFICATION, SyncStatus.SYNCED)
+                        taskDao.updateTaskStatus(
+                            item.entityId,
+                            com.mine.governance.domain.model.TaskStatus.AWAITING_VERIFICATION,
+                            SyncStatus.SYNCED
+                        )
                     }
                     else -> {
-                        // Generic entities
+                        // Generic observations / reports marked synced
                     }
                 }
 
@@ -88,7 +110,7 @@ class SyncRepository(
                 }
             } catch (e: Exception) {
                 failedCount++
-                syncQueueDao.recordFailure(item.queueId, e.message ?: "Network Gateway Timeout")
+                syncQueueDao.recordFailure(item.queueId, e.message ?: "Gateway Connection Timeout")
             }
         }
 
@@ -96,7 +118,8 @@ class SyncRepository(
             processedCount = pendingItems.size,
             successCount = successCount,
             failedCount = failedCount,
-            highestPrioritySynced = highestPriority
+            highestPrioritySynced = highestPriority,
+            offlineDeferred = false
         )
     }
 }

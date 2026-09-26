@@ -27,11 +27,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mine.governance.ui.theme.ActiveBeigeButtonBrush
+import com.mine.governance.ui.theme.BrandEarthBrown
+import com.mine.governance.ui.theme.DarkCanvas
+import com.mine.governance.ui.theme.DeepWarmStone
+import com.mine.governance.ui.theme.DividerBorderDark
 import com.mine.governance.ui.theme.EmergencyFireBrush
-import com.mine.governance.ui.theme.SafeMinesBlack
-import com.mine.governance.ui.theme.SafeMinesDarkGreen
-import com.mine.governance.ui.theme.SafeMinesOliveGreen
-import com.mine.governance.ui.theme.SafeMinesYellow
+import com.mine.governance.ui.theme.SubPanelDark
+import com.mine.governance.ui.theme.WarmActiveBeige
 
 @Composable
 fun GlassGoldButton(
@@ -50,20 +53,20 @@ fun GlassGoldButton(
             .fillMaxWidth()
             .height(height)
             .shadow(
-                elevation = if (enabled) 10.dp else 0.dp,
+                elevation = if (enabled) 8.dp else 0.dp,
                 shape = shape,
-                ambientColor = SafeMinesOliveGreen.copy(alpha = 0.4f),
-                spotColor = SafeMinesDarkGreen.copy(alpha = 0.4f)
+                ambientColor = Color.Black.copy(alpha = 0.5f),
+                spotColor = WarmActiveBeige.copy(alpha = 0.3f)
             )
             .clip(shape)
             .background(
-                if (enabled) Brush.linearGradient(listOf(SafeMinesOliveGreen, SafeMinesDarkGreen))
-                else Brush.linearGradient(listOf(Color.DarkGray, Color.Gray))
+                if (enabled) ActiveBeigeButtonBrush
+                else Brush.linearGradient(listOf(Color(0xFF3F3B37), Color(0xFF292524)))
             )
             .clickable(
                 enabled = enabled && !isLoading,
                 interactionSource = remember { MutableInteractionSource() },
-                indication = rememberRipple(color = Color.White.copy(alpha = 0.2f)),
+                indication = rememberRipple(color = DeepWarmStone.copy(alpha = 0.3f)),
                 onClick = onClick
             ),
         contentAlignment = Alignment.Center
@@ -71,7 +74,7 @@ fun GlassGoldButton(
         if (isLoading) {
             CircularProgressIndicator(
                 modifier = Modifier.size(24.dp),
-                color = Color.White,
+                color = DeepWarmStone,
                 strokeWidth = 2.5.dp
             )
         } else {
@@ -85,7 +88,7 @@ fun GlassGoldButton(
                 }
                 Text(
                     text = text,
-                    color = Color.White,
+                    color = DeepWarmStone,
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
                     letterSpacing = 0.5.sp
@@ -161,14 +164,14 @@ fun GlassSecondaryButton(
             .glassEffect(
                 shape = shape,
                 borderBrush = Brush.linearGradient(
-                    listOf(SafeMinesYellow.copy(alpha = 0.6f), SafeMinesOliveGreen.copy(alpha = 0.2f))
+                    listOf(WarmActiveBeige.copy(alpha = 0.40f), DividerBorderDark.copy(alpha = 0.6f))
                 ),
-                surfaceTint = SafeMinesDarkGreen.copy(alpha = 0.65f)
+                surfaceTint = SubPanelDark.copy(alpha = 0.85f)
             )
             .clip(shape)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
-                indication = rememberRipple(color = SafeMinesYellow.copy(alpha = 0.3f)),
+                indication = rememberRipple(color = WarmActiveBeige.copy(alpha = 0.2f)),
                 onClick = onClick
             )
             .padding(horizontal = 16.dp, vertical = 12.dp),
@@ -181,7 +184,7 @@ fun GlassSecondaryButton(
             }
             Text(
                 text = text,
-                color = SafeMinesYellow,
+                color = WarmActiveBeige,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 14.sp
             )

@@ -2,7 +2,8 @@ package com.mine.governance.ui.screens.emergency
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.mine.governance.data.local.entity.EmergencyReportEntity
+import com.mine.governance.data.location.LocationHelper
+import com.mine.governance.data.location.LocationStatus
 import com.mine.governance.data.repository.AuthRepository
 import com.mine.governance.data.repository.EmergencyRepository
 import com.mine.governance.data.repository.EmergencySubmissionResult
@@ -17,9 +18,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 data class EmergencyUiState(
     val selectedType: EmergencyType = EmergencyType.GAS_LEAKAGE,
@@ -27,13 +25,15 @@ data class EmergencyUiState(
     val title: String = "",
     val description: String = "",
     val immediateObservations: String = "",
-    val affectedPersonnel: Int = 3,
+    val affectedPersonnel: Int = 2,
     val additionalRemarks: String = "",
     val mineSector: String = "Shaft 4 • Deep Extraction Face 2",
     val latitude: Double = 23.7957,
     val longitude: Double = 86.4304,
-    val capturedEvidenceCount: Int = 2,
-    val capturedEvidenceUris: List<String> = listOf("mock://evidence/gas_sensor_gauge.jpg", "mock://evidence/face2_leak.jpg"),
+    val accuracyMeters: Float = 0f,
+    val isSubterraneanLocationFallback: Boolean = false,
+    val locationStatus: LocationStatus = LocationStatus.Idle,
+    val capturedEvidenceUris: List<String> = emptyList(),
     val reportingOfficerId: String = "EMP-7842",
     val reportingOfficerName: String = "Rajesh Kumar",
     val currentNetworkMode: NetworkMode = NetworkMode.OFFLINE,
@@ -43,7 +43,7 @@ data class EmergencyUiState(
     val dynamicAiRisk: AiRiskAssessment = AiRiskEngine.evaluateEmergencyRisk(
         EmergencyType.GAS_LEAKAGE,
         Severity.CRITICAL,
-        3,
+        2,
         "Shaft 4 • Deep Extraction Face 2"
     )
 )
@@ -51,7 +51,8 @@ data class EmergencyUiState(
 class EmergencyViewModel(
     private val emergencyRepository: EmergencyRepository,
     private val authRepository: AuthRepository,
-    private val networkMonitor: NetworkMonitor
+    private val networkMonitor: NetworkMonitor,
+    private val locationHelper: LocationHelper
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(EmergencyUiState())
@@ -76,6 +77,35 @@ class EmergencyViewModel(
                 _uiState.update { it.copy(currentNetworkMode = mode) }
             }
         }
+
+        viewModelScope.launch {
+            locationHelper.status.collect { status ->
+                _uiState.update { state ->
+                    when (status) {
+                        is LocationStatus.Acquired -> state.copy(
+                            locationStatus = status,
+                            latitude = status.latitude,
+                            longitude = status.longitude,
+                            accuracyMeters = status.accuracyMeters,
+                            isSubterraneanLocationFallback = status.isSubterraneanFallback
+                        )
+                        else -> state.copy(locationStatus = status)
+                    }
+                }
+            }
+        }
+
+        requestRealLocation()
+    }
+
+    fun requestRealLocation() {
+        viewModelScope.launch {
+            locationHelper.fetchCurrentLocation()
+        }
+    }
+
+    fun onLocationPermissionDenied() {
+        locationHelper.setPermissionDenied()
     }
 
     fun selectType(type: EmergencyType) {
@@ -105,14 +135,24 @@ class EmergencyViewModel(
         }
     }
 
-    fun addSimulatedEvidence() {
-        val count = _uiState.value.capturedEvidenceCount + 1
-        val newUris = _uiState.value.capturedEvidenceUris + "mock://evidence/capture_$count.jpg"
+    fun addEvidencePhoto(uriString: String) {
         _uiState.update {
-            it.copy(
-                capturedEvidenceCount = count,
-                capturedEvidenceUris = newUris
-            )
+            it.copy(capturedEvidenceUris = it.capturedEvidenceUris + uriString)
+        }
+    }
+
+    fun removeEvidence(index: Int) {
+        _uiState.update {
+            val list = it.capturedEvidenceUris.toMutableList()
+            if (index in list.indices) list.removeAt(index)
+            it.copy(capturedEvidenceUris = list)
+        }
+    }
+
+    fun selectSector(sector: String) {
+        _uiState.update {
+            val updated = it.copy(mineSector = sector)
+            updated.copy(dynamicAiRisk = recomputeRisk(updated))
         }
     }
 

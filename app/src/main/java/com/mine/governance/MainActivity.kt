@@ -10,6 +10,8 @@ import com.mine.governance.ui.navigation.MineAppNavHost
 import com.mine.governance.ui.screens.emergency.EmergencyViewModel
 import com.mine.governance.ui.screens.home.HomeViewModel
 import com.mine.governance.ui.screens.login.LoginViewModel
+import com.mine.governance.ui.screens.observations.ObservationViewModel
+import com.mine.governance.ui.screens.profile.ProfileViewModel
 import com.mine.governance.ui.screens.tasks.TaskViewModel
 import com.mine.governance.ui.theme.MineGovernanceTheme
 
@@ -48,7 +50,8 @@ class MainActivity : ComponentActivity() {
                     return EmergencyViewModel(
                         emergencyRepository = app.emergencyRepository,
                         authRepository = app.authRepository,
-                        networkMonitor = app.networkMonitor
+                        networkMonitor = app.networkMonitor,
+                        locationHelper = app.locationHelper
                     ) as T
                 }
             }
@@ -65,13 +68,37 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        val observationViewModel: ObservationViewModel by viewModels {
+            object : ViewModelProvider.Factory {
+                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                    return ObservationViewModel(
+                        authRepository = app.authRepository,
+                        syncRepository = app.syncRepository
+                    ) as T
+                }
+            }
+        }
+
+        val profileViewModel: ProfileViewModel by viewModels {
+            object : ViewModelProvider.Factory {
+                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                    return ProfileViewModel(
+                        authRepository = app.authRepository,
+                        syncRepository = app.syncRepository
+                    ) as T
+                }
+            }
+        }
+
         setContent {
             MineGovernanceTheme {
                 MineAppNavHost(
                     loginViewModel = loginViewModel,
                     homeViewModel = homeViewModel,
                     emergencyViewModel = emergencyViewModel,
-                    taskViewModel = taskViewModel
+                    taskViewModel = taskViewModel,
+                    observationViewModel = observationViewModel,
+                    profileViewModel = profileViewModel
                 )
             }
         }

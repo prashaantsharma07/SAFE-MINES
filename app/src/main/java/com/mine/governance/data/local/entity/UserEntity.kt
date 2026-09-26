@@ -11,7 +11,10 @@ data class UserEntity(
     val role: String,
     val department: String,
     val assignedMine: String,
+    val assignedColliery: String = "Jharia Colliery (Bharat Coking Coal Limited)",
+    val dgmsCertification: String = "DGMS First Class Manager Certificate (CMR-2019/4821)",
     val permissionLevel: String,
+    val passwordHash: String = "",
     val isCurrentlyLoggedIn: Boolean = false,
     val lastActiveTimestamp: Long = System.currentTimeMillis()
 )

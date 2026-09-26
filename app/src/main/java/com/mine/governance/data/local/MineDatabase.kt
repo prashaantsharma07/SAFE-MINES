@@ -28,7 +28,7 @@ import kotlinx.coroutines.launch
         TaskEntity::class,
         SyncQueueEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -70,15 +70,19 @@ abstract class MineDatabase : RoomDatabase() {
             val userDao = database.userDao()
             val taskDao = database.taskDao()
 
-            // 1. Pre-populate field officer Rajesh Kumar
+            // 1. Pre-populate field officer Rajesh Kumar with SHA-256 password hash for "MineSafety@2026"
+            val demoHash = com.mine.governance.data.repository.PasswordHasher.hash("MineSafety@2026")
             userDao.insertOrUpdate(
                 UserEntity(
                     employeeId = "EMP-7842",
                     name = "Rajesh Kumar",
                     role = "Safety Field Officer",
-                    department = "Safety Operations",
+                    department = "Safety Operations & Compliance",
                     assignedMine = "Mine B (Underground Shaft 4)",
+                    assignedColliery = "Jharia Colliery (Bharat Coking Coal Limited)",
+                    dgmsCertification = "DGMS First Class Manager Certificate (CMR-2019/4821)",
                     permissionLevel = "LEVEL_3_INSPECTOR",
+                    passwordHash = demoHash,
                     isCurrentlyLoggedIn = true
                 )
             )

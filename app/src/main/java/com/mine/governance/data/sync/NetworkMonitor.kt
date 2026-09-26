@@ -77,6 +77,23 @@ class NetworkMonitor(private val context: Context) {
         manualOverride.value = mode
     }
 
+    fun getCurrentNetworkMode(): NetworkMode {
+        val override = manualOverride.value
+        if (override != null) return override
+        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return NetworkMode.OFFLINE
+        val activeNetwork = connectivityManager.activeNetwork ?: return NetworkMode.OFFLINE
+        val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork) ?: return NetworkMode.OFFLINE
+        return when {
+            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                    capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) -> {
+                val downstream = capabilities.linkDownstreamBandwidthKbps
+                if (downstream < 300) NetworkMode.WEAK_NETWORK else NetworkMode.ONLINE
+            }
+            capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> NetworkMode.WEAK_NETWORK
+            else -> NetworkMode.OFFLINE
+        }
+    }
+
     fun toggleNextMode(current: NetworkMode) {
         val next = when (current) {
             NetworkMode.ONLINE -> NetworkMode.WEAK_NETWORK

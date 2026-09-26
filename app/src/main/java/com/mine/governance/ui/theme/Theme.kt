@@ -1,32 +1,33 @@
 package com.mine.governance.ui.theme
 
 import android.app.Activity
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-private val SafeMinesColorScheme = darkColorScheme(
-    primary = SafeMinesOliveGreen,
-    onPrimary = SafeMinesBlack,
-    primaryContainer = SafeMinesDarkGreen,
-    onPrimaryContainer = SafeMinesYellow,
-    secondary = SafeMinesYellow,
-    onSecondary = SafeMinesBlack,
-    secondaryContainer = SafeMinesDarkGreen,
-    onSecondaryContainer = SafeMinesOliveGreen,
-    tertiary = SafeMinesYellow,
-    background = SafeMinesBlack,
+private val IndustrialDarkColorScheme = darkColorScheme(
+    primary = WarmActiveBeige,
+    onPrimary = DeepWarmStone,
+    primaryContainer = BrandEarthBrown,
+    onPrimaryContainer = WarmActiveBeige,
+    secondary = BrandEarthBrownHover,
+    onSecondary = TextPrimary,
+    secondaryContainer = SubPanelDark,
+    onSecondaryContainer = WarmActiveBeigeSubtle,
+    tertiary = WarningOrange,
+    background = DeepWarmStone,
     onBackground = TextPrimary,
-    surface = SafeMinesDarkGreen,
+    surface = DarkCanvas,
     onSurface = TextPrimary,
-    error = EmergencyCrimson,
-    onError = Color.White
+    surfaceVariant = SubPanelDark,
+    onSurfaceVariant = TextSecondary,
+    outline = DividerBorderDark,
+    error = CriticalRed,
+    onError = TextPrimary
 )
 
 @Composable
@@ -34,15 +35,15 @@ fun MineGovernanceTheme(
     darkTheme: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = SafeMinesColorScheme
+    val colorScheme = IndustrialDarkColorScheme
     val view = LocalView.current
 
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as? Activity)?.window
             if (window != null) {
-                window.statusBarColor = SafeMinesBlack.toArgb()
-                window.navigationBarColor = SafeMinesBlack.toArgb()
+                window.statusBarColor = DeepWarmStone.toArgb()
+                window.navigationBarColor = DeepWarmStone.toArgb()
                 WindowCompat.getInsetsController(window, view).apply {
                     isAppearanceLightStatusBars = false
                     isAppearanceLightNavigationBars = false
