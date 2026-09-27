@@ -60,11 +60,35 @@ class LoginViewModel(private val authRepository: AuthRepository) : ViewModel() {
         }
     }
 
+    fun loginWithBiometrics(onSuccess: () -> Unit) {
+        _uiState.update { it.copy(isLoading = true, error = null) }
+        viewModelScope.launch {
+            val targetId = if (_uiState.value.employeeId.contains("admin", ignoreCase = true)) "admin" else "EMP-7842"
+            val result = authRepository.biometricLogin(targetId)
+            result.onSuccess { user ->
+                _uiState.update { it.copy(isLoading = false, isSuccess = true, currentUser = user) }
+                onSuccess()
+            }.onFailure { err ->
+                _uiState.update { it.copy(isLoading = false, error = err.message ?: "Biometric recognition failed") }
+            }
+        }
+    }
+
     fun fillDemoOfficer() {
         _uiState.update {
             it.copy(
                 employeeId = "EMP-7842",
                 password = "MineSafety@2026",
+                error = null
+            )
+        }
+    }
+
+    fun fillAdminDemo() {
+        _uiState.update {
+            it.copy(
+                employeeId = "admin",
+                password = "admin",
                 error = null
             )
         }

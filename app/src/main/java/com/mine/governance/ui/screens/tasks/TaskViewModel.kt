@@ -43,6 +43,9 @@ class TaskViewModel(
     val uiState: StateFlow<TaskUiState> = _uiState.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            taskRepository.ensureDefaultTasks()
+        }
         observeTasks()
     }
 

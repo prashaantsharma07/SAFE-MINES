@@ -101,4 +101,34 @@ class EmergencyRepository(
             wasQueuedOffline = isOfflineOrWeak
         )
     }
+
+    suspend fun triggerSimulationDrill(): EmergencyReportEntity = withContext(Dispatchers.IO) {
+        val simIncidentId = "SIM-EMG-9021"
+        val reportEntity = EmergencyReportEntity(
+            id = simIncidentId,
+            incidentType = EmergencyType.GAS_LEAKAGE,
+            severity = Severity.CRITICAL,
+            title = "DRILL SIMULATION: Methane Gas Surge (2.8% CH4)",
+            description = "Simulated explosive gas release during coal cutting. Immediate evacuation exercise initiated per DGMS circular.",
+            immediateObservations = "Dual sensor confirmation: 2.8% CH4 in return air split. Auxiliary fan interlocked.",
+            affectedPersonnel = 14,
+            remarks = "EMERGENCY DRILL EXERCISE - ALL ACTIONS ARE SIMULATED FOR DGMS READINESS.",
+            latitude = 23.7957,
+            longitude = 86.4304,
+            mineSector = "Shaft 4 • Deep Extraction Face 2",
+            reportedByEmployeeId = "EMP-7842",
+            timestamp = System.currentTimeMillis(),
+            aiRiskScore = 94,
+            aiRationale = "DGMS Simulation triggered: High CH4 concentration with 14 workers in return split.",
+            mediaUris = emptyList(),
+            syncStatus = SyncStatus.PENDING,
+            syncPriority = SyncPriorityLevels.EMERGENCY
+        )
+        emergencyDao.insertEmergency(reportEntity)
+        reportEntity
+    }
+
+    suspend fun clearSimulationDrill() = withContext(Dispatchers.IO) {
+        emergencyDao.clearSimulatedEmergencies()
+    }
 }

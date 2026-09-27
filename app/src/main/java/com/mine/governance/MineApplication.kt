@@ -11,6 +11,7 @@ import com.mine.governance.data.sync.NetworkMonitor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 class MineApplication : Application() {
 
@@ -57,7 +58,10 @@ class MineApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        // Pre-warm database instance
+        // Pre-warm database instance and ensure tasks exist
         database
+        applicationScope.launch {
+            taskRepository.ensureDefaultTasks()
+        }
     }
 }

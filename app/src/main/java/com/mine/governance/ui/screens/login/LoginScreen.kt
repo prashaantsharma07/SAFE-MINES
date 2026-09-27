@@ -52,12 +52,16 @@ import com.mine.governance.ui.components.GlassGoldButton
 import com.mine.governance.ui.components.GlassTextField
 import com.mine.governance.ui.theme.CavernDark
 import com.mine.governance.ui.theme.CyberCyan
+import com.mine.governance.ui.theme.DarkCanvas
 import com.mine.governance.ui.theme.DarkGlassBackgroundBrush
+import com.mine.governance.ui.theme.DividerBorderDark
 import com.mine.governance.ui.theme.ImperialGold
 import com.mine.governance.ui.theme.ObsidianBlack
+import com.mine.governance.ui.theme.SubPanelDark
 import com.mine.governance.ui.theme.TextMuted
 import com.mine.governance.ui.theme.TextPrimary
 import com.mine.governance.ui.theme.TextSecondary
+import com.mine.governance.ui.theme.WarmActiveBeige
 
 @Composable
 fun LoginScreen(
@@ -213,31 +217,61 @@ fun LoginScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Quick Demo Preset Chip
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color.White.copy(alpha = 0.05f))
-                            .clickable { viewModel.fillDemoOfficer() }
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                    // Quick Demo Preset Chips: Officer & Admin
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(
-                            text = "Fill Demo: Rajesh Kumar (Mine B)",
-                            fontSize = 11.sp,
-                            color = CyberCyan
-                        )
-                        Text(
-                            text = "Auto-fill",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = ImperialGold
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(SubPanelDark)
+                                .border(1.dp, DividerBorderDark, RoundedCornerShape(8.dp))
+                                .clickable { viewModel.fillDemoOfficer() }
+                                .padding(horizontal = 12.dp, vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "👤 Field Officer: Rajesh Kumar",
+                                fontSize = 11.sp,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = "Auto-fill",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = WarmActiveBeige
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(SubPanelDark)
+                                .border(1.dp, DividerBorderDark, RoundedCornerShape(8.dp))
+                                .clickable { viewModel.fillAdminDemo() }
+                                .padding(horizontal = 12.dp, vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "🛡️ Mine Admin: Dr. Vikram Sethi",
+                                fontSize = 11.sp,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = "Auto-fill",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = WarmActiveBeige
+                            )
+                        }
                     }
 
-                    Spacer(modifier = Modifier.height(22.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
 
                     // Sign-in Button
                     GlassGoldButton(
@@ -246,29 +280,36 @@ fun LoginScreen(
                         isLoading = uiState.isLoading
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
-                    // Biometric Login Simulation
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
+                    // Real Functional Biometric Quick Sign-In
+                    Box(
                         modifier = Modifier
+                            .fillMaxWidth()
                             .clip(RoundedCornerShape(10.dp))
-                            .clickable { viewModel.login(onLoginSuccess) }
-                            .padding(8.dp)
+                            .background(DarkCanvas)
+                            .border(1.dp, WarmActiveBeige.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
+                            .clickable(enabled = !uiState.isLoading) {
+                                viewModel.loginWithBiometrics(onLoginSuccess)
+                            }
+                            .padding(vertical = 10.dp, horizontal = 12.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Fingerprint,
-                            contentDescription = "Biometric Login",
-                            tint = CyberCyan,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Biometric Touch ID Ready",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = TextSecondary
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Fingerprint,
+                                contentDescription = "Biometric Touch ID",
+                                tint = WarmActiveBeige,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "1-Tap Biometric Touch Sign-In",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = WarmActiveBeige
+                            )
+                        }
                     }
                 }
             }

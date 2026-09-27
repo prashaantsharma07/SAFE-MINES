@@ -50,4 +50,10 @@ interface TaskDao {
         comments: String,
         syncStatus: SyncStatus = SyncStatus.PENDING
     )
+
+    @Query("SELECT COUNT(*) FROM tasks")
+    suspend fun getTaskCount(): Int
+
+    @Query("DELETE FROM tasks WHERE id LIKE 'SIM-%'")
+    suspend fun clearSimulatedTasks()
 }

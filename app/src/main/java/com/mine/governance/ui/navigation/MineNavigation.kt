@@ -106,7 +106,7 @@ fun MineAppNavHost(
                     onNavigateToEmergency = { navController.navigate(MineDestinations.EMERGENCY) },
                     onNavigateToTasks = { navController.navigate(MineDestinations.TASKS) },
                     onNavigateToObservation = { navController.navigate(MineDestinations.REPORTS) },
-                    onNavigateToInspection = { navController.navigate(MineDestinations.TASKS) }
+                    onNavigateToInspection = { navController.navigate(MineDestinations.MAP) }
                 )
             }
 

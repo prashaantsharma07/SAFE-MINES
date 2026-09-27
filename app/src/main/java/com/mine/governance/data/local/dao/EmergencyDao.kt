@@ -27,4 +27,13 @@ interface EmergencyDao {
 
     @Query("SELECT COUNT(*) FROM emergency_reports")
     fun getTotalEmergencyCountFlow(): Flow<Int>
+
+    @Query("SELECT * FROM emergency_reports ORDER BY timestamp DESC LIMIT 20")
+    suspend fun getRecentEmergencies(): List<EmergencyReportEntity>
+
+    @Query("SELECT COUNT(*) FROM emergency_reports")
+    suspend fun getTotalEmergencyCount(): Int
+
+    @Query("DELETE FROM emergency_reports WHERE id LIKE 'SIM-%'")
+    suspend fun clearSimulatedEmergencies()
 }

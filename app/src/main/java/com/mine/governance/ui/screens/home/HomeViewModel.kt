@@ -20,6 +20,7 @@ import java.util.Locale
 
 data class HomeUiState(
     val currentUser: UserEntity? = null,
+    val isAdmin: Boolean = false,
     val networkMode: NetworkMode = NetworkMode.OFFLINE,
     val pendingSyncCount: Int = 0,
     val lastSyncTime: String = "10:32 AM",
@@ -30,7 +31,9 @@ data class HomeUiState(
     val openIssuesCount: Int = 3,
     val completedInspectionsCount: Int = 8,
     val pendingInspectionsCount: Int = 2,
-    val shiftTimestamp: String = ""
+    val shiftTimestamp: String = "",
+    val isSimulationDrillActive: Boolean = false,
+    val simulationMessage: String? = null
 )
 
 class HomeViewModel(
@@ -57,7 +60,15 @@ class HomeViewModel(
     private fun observeData() {
         viewModelScope.launch {
             authRepository.activeUserFlow.collect { user ->
-                _uiState.update { it.copy(currentUser = user) }
+                val isAdminUser = user?.permissionLevel == "LEVEL_5_DIRECTOR" ||
+                        user?.employeeId.equals("admin", ignoreCase = true) ||
+                        user?.role?.contains("Director", ignoreCase = true) == true
+                _uiState.update {
+                    it.copy(
+                        currentUser = user,
+                        isAdmin = isAdminUser
+                    )
+                }
             }
         }
 
@@ -90,6 +101,37 @@ class HomeViewModel(
                 _uiState.update { it.copy(totalReportsCount = 10 + list.size) }
             }
         }
+    }
+
+    fun toggleSimulationDrill() {
+        val currentlyActive = _uiState.value.isSimulationDrillActive
+        viewModelScope.launch {
+            if (!currentlyActive) {
+                // START SIMULATION DRILL
+                val drillReport = emergencyRepository.triggerSimulationDrill()
+                taskRepository.insertSimulationTasks()
+                _uiState.update {
+                    it.copy(
+                        isSimulationDrillActive = true,
+                        simulationMessage = "EMERGENCY DRILL ACTIVE: Incident ${drillReport.id} registered! 2 priority tasks dispatched to crew."
+                    )
+                }
+            } else {
+                // STOP SIMULATION DRILL & RESTORE NORMAL STATE
+                emergencyRepository.clearSimulationDrill()
+                taskRepository.clearSimulationTasks()
+                _uiState.update {
+                    it.copy(
+                        isSimulationDrillActive = false,
+                        simulationMessage = "Simulation drill concluded. Normal shift monitoring restored."
+                    )
+                }
+            }
+        }
+    }
+
+    fun dismissSimulationMessage() {
+        _uiState.update { it.copy(simulationMessage = null) }
     }
 
     fun triggerSync() {
