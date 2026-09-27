@@ -51,6 +51,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mine.governance.ui.components.ConnectivityCard
@@ -188,39 +189,58 @@ fun HomeScreen(
                     GlassCard(
                         modifier = Modifier.fillMaxWidth(),
                         borderBrush = Brush.linearGradient(listOf(CriticalRed, WarningOrange)),
-                        surfaceTint = Color(0xFF381A1A),
+                        surfaceTint = Color(0xFF331414),
                         contentPadding = 14.dp
                     ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(CriticalRed))
+                                Row(
+                                    modifier = Modifier.weight(1f),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(10.dp)
+                                            .clip(CircleShape)
+                                            .background(CriticalRed)
+                                    )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        text = "EMERGENCY DRILL SIMULATION ACTIVE",
-                                        fontSize = 13.sp,
+                                        text = "EMERGENCY DRILL ACTIVE",
+                                        fontSize = 12.sp,
                                         fontWeight = FontWeight.ExtraBold,
                                         color = CriticalRed,
-                                        letterSpacing = 0.5.sp
+                                        letterSpacing = 0.5.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(6.dp))
                                         .background(CriticalRed)
-                                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                                        .padding(horizontal = 8.dp, vertical = 3.dp)
                                 ) {
-                                    Text(text = "LIVE DRILL", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                    Text(
+                                        text = "LIVE DRILL",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color.White,
+                                        maxLines = 1,
+                                        softWrap = false
+                                    )
                                 }
                             }
                             Text(
                                 text = "Scenario #9021: 2.8% CH4 Methane Surge at Face 2 • 2 Priority Emergency Tasks Dispatched.",
                                 fontSize = 12.sp,
-                                color = WarmActiveBeige
+                                color = WarmActiveBeige,
+                                lineHeight = 16.sp
                             )
                         }
                     }
@@ -306,7 +326,7 @@ fun HomeScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = if (uiState.isSimulationDrillActive) "⏹️ STOP DRILL & RESTORE NORMAL STATE" else "⚡ START EMERGENCY DRILL SIMULATION",
+                                text = if (uiState.isSimulationDrillActive) "STOP DRILL & RESTORE STATE" else "START EMERGENCY DRILL",
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp
@@ -463,7 +483,9 @@ fun HomeScreen(
 
         SnackbarHost(
             hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 80.dp)
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 16.dp, start = 16.dp, end = 16.dp)
         )
     }
 }

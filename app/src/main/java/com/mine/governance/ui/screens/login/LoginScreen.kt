@@ -279,38 +279,6 @@ fun LoginScreen(
                         onClick = { viewModel.login(onLoginSuccess) },
                         isLoading = uiState.isLoading
                     )
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    // Real Functional Biometric Quick Sign-In
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(DarkCanvas)
-                            .border(1.dp, WarmActiveBeige.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
-                            .clickable(enabled = !uiState.isLoading) {
-                                viewModel.loginWithBiometrics(onLoginSuccess)
-                            }
-                            .padding(vertical = 10.dp, horizontal = 12.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Fingerprint,
-                                contentDescription = "Biometric Touch ID",
-                                tint = WarmActiveBeige,
-                                modifier = Modifier.size(22.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "1-Tap Biometric Touch Sign-In",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = WarmActiveBeige
-                            )
-                        }
-                    }
                 }
             }
 

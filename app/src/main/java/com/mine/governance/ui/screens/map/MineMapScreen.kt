@@ -1,17 +1,17 @@
 package com.mine.governance.ui.screens.map
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.Canvas
+import android.Manifest
+import android.annotation.SuppressLint
+import android.view.ViewGroup
+import android.webkit.WebChromeClient
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,169 +20,126 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.MyLocation
-import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.mine.governance.domain.model.Severity
-import com.mine.governance.ui.components.GlassCard
-import com.mine.governance.ui.theme.BrandEarthBrown
-import com.mine.governance.ui.theme.CriticalRed
+import androidx.compose.ui.viewinterop.AndroidView
+import com.mine.governance.data.location.LocationHelper
+import com.mine.governance.data.location.LocationStatus
 import com.mine.governance.ui.theme.DarkCanvas
 import com.mine.governance.ui.theme.DeepWarmStone
 import com.mine.governance.ui.theme.DividerBorderDark
 import com.mine.governance.ui.theme.OperationalGreen
 import com.mine.governance.ui.theme.SubPanelDark
-import com.mine.governance.ui.theme.TextMuted
 import com.mine.governance.ui.theme.TextPrimary
 import com.mine.governance.ui.theme.TextSecondary
 import com.mine.governance.ui.theme.WarmActiveBeige
 import com.mine.governance.ui.theme.WarningOrange
+import kotlinx.coroutines.launch
 
-data class MineMapPin(
-    val id: String,
-    val title: String,
-    val subtitle: String,
-    val sector: String,
-    val depth: String,
-    val normX: Float, // 0.0 to 1.0 within map canvas
-    val normY: Float,
-    val severity: Severity?,
-    val isOfficerBeacon: Boolean = false,
-    val telemetryInfo: String,
-    val actionDirective: String
-)
-
-enum class MapLayerFilter(val label: String) {
-    ALL("All Layers"),
-    HAZARDS("Hazards (L1/L2)"),
-    DRIFTS("Drifts & Shafts"),
-    SENSORS("Atmospheric Sensors"),
-    INFRASTRUCTURE("Fans & Pumps")
+enum class MapLayerType(val label: String) {
+    STREET("🗺️ Street Map"),
+    SATELLITE("🛰️ Satellite")
 }
 
+@SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun MineMapScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var scale by remember { mutableFloatStateOf(1.0f) }
-    var offsetX by remember { mutableFloatStateOf(0f) }
-    var offsetY by remember { mutableFloatStateOf(0f) }
-    var selectedPin by remember { mutableStateOf<MineMapPin?>(null) }
-    var selectedFilter by remember { mutableStateOf(MapLayerFilter.ALL) }
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val locationHelper = remember { LocationHelper(context) }
 
-    val pins = remember {
-        listOf(
-            MineMapPin(
-                id = "PIN-1",
-                title = "Methane Gas Surge",
-                subtitle = "CH4: 2.8% • AI Risk 92/100",
-                sector = "Sector 3 (East Drift)",
-                depth = "-380m Subterranean Level",
-                normX = 0.68f,
-                normY = 0.38f,
-                severity = Severity.CRITICAL,
-                isOfficerBeacon = false,
-                telemetryInfo = "Auxiliary Fan CFM: 1,850 m³/min • Methane Sensor: CH4-03 ACTIVE",
-                actionDirective = "Immediate zone isolation per DGMS CMR-2017 Reg. 153. Restrict entry."
-            ),
-            MineMapPin(
-                id = "PIN-2",
-                title = "Hydraulic Roof Canopy Stress",
-                subtitle = "Pressure Drop: 140 Bar • Risk 67/100",
-                sector = "Deep Extraction Face 2",
-                depth = "-420m Longwall Advance",
-                normX = 0.42f,
-                normY = 0.65f,
-                severity = Severity.HIGH,
-                isOfficerBeacon = false,
-                telemetryInfo = "Extensometer: 14mm displacement • Canopy 8A-12B warning",
-                actionDirective = "Set secondary timber cogs and verify pump accumulator pressure."
-            ),
-            MineMapPin(
-                id = "PIN-3",
-                title = "Main Booster Fan Station #1",
-                subtitle = "Airflow: 6.2 m/s • Optimal",
-                sector = "North Incline Shaft",
-                depth = "-120m Intermediate Split",
-                normX = 0.30f,
-                normY = 0.25f,
-                severity = Severity.LOW,
-                isOfficerBeacon = false,
-                telemetryInfo = "RPM: 740 • Static Water Gauge: 65mm • Power: Normal Grid",
-                actionDirective = "Operational. Next routine vibration logging due at 14:00."
-            ),
-            MineMapPin(
-                id = "PIN-4",
-                title = "Emergency Sump Pump 4B",
-                subtitle = "Water Head: 14.2 Bar • Flow: Normal",
-                sector = "Lower Haulage Level 5",
-                depth = "-460m Deep Sump",
-                normX = 0.75f,
-                normY = 0.78f,
-                severity = Severity.LOW,
-                isOfficerBeacon = false,
-                telemetryInfo = "Float Switch: Active • Discharge rate: 450 gpm",
-                actionDirective = "Clear mud sediment strainer during shift handover."
-            ),
-            MineMapPin(
-                id = "PIN-5",
-                title = "Officer Rajesh Kumar (Beacon)",
-                subtitle = "Safety Field Officer • EMP-7842",
-                sector = "Shaft 4 Pithead & Control Station",
-                depth = "Surface Incline (+180m MSL)",
-                normX = 0.50f,
-                normY = 0.15f,
-                severity = null,
-                isOfficerBeacon = true,
-                telemetryInfo = "GPS: 23.7957° N, 86.4304° E • Subterranean Comms: Online",
-                actionDirective = "Authorized Level-3 Inspection Authority."
-            )
-        )
+    // Live coordinates - default to Jharia Colliery pithead if GPS unavailable
+    var userLat by remember { mutableDoubleStateOf(23.7957) }
+    var userLon by remember { mutableDoubleStateOf(86.4304) }
+    var userAccuracy by remember { mutableFloatStateOf(25.0f) }
+    var isGpsLocked by remember { mutableStateOf(false) }
+    var isLocating by remember { mutableStateOf(true) }
+    var selectedLayer by remember { mutableStateOf(MapLayerType.STREET) }
+    var webViewInstance by remember { mutableStateOf<WebView?>(null) }
+
+    // Permission launcher for high-accuracy GPS
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val fine = permissions[Manifest.permission.ACCESS_FINE_LOCATION] ?: false
+        val coarse = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] ?: false
+        if (fine || coarse) {
+            coroutineScope.launch {
+                isLocating = true
+                val status = locationHelper.fetchCurrentLocation()
+                if (status is LocationStatus.Acquired) {
+                    userLat = status.latitude
+                    userLon = status.longitude
+                    userAccuracy = status.accuracyMeters
+                    isGpsLocked = !status.isSubterraneanFallback
+                    webViewInstance?.evaluateJavascript(
+                        "updatePosition(${userLat}, ${userLon}, ${userAccuracy});",
+                        null
+                    )
+                }
+                isLocating = false
+            }
+        } else {
+            isLocating = false
+        }
     }
 
-    val visiblePins = remember(selectedFilter, pins) {
-        when (selectedFilter) {
-            MapLayerFilter.ALL -> pins
-            MapLayerFilter.HAZARDS -> pins.filter { it.severity == Severity.CRITICAL || it.severity == Severity.HIGH }
-            MapLayerFilter.DRIFTS -> pins.filter { it.isOfficerBeacon }
-            MapLayerFilter.SENSORS -> pins.filter { it.title.contains("Gas", ignoreCase = true) || it.title.contains("Stress", ignoreCase = true) }
-            MapLayerFilter.INFRASTRUCTURE -> pins.filter { it.title.contains("Fan", ignoreCase = true) || it.title.contains("Pump", ignoreCase = true) }
+    // Acquire GPS upon entering the screen
+    LaunchedEffect(Unit) {
+        if (locationHelper.hasLocationPermission()) {
+            isLocating = true
+            val status = locationHelper.fetchCurrentLocation()
+            if (status is LocationStatus.Acquired) {
+                userLat = status.latitude
+                userLon = status.longitude
+                userAccuracy = status.accuracyMeters
+                isGpsLocked = !status.isSubterraneanFallback
+                webViewInstance?.evaluateJavascript(
+                    "updatePosition(${userLat}, ${userLon}, ${userAccuracy});",
+                    null
+                )
+            }
+            isLocating = false
+        } else {
+            permissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
         }
     }
 
@@ -192,10 +149,11 @@ fun MineMapScreen(
             .background(DeepWarmStone)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Header Bar
+            // Top Navigation & Concession Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .background(DarkCanvas)
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -204,7 +162,7 @@ fun MineMapScreen(
                     modifier = Modifier
                         .size(38.dp)
                         .clip(CircleShape)
-                        .background(DarkCanvas)
+                        .background(SubPanelDark)
                         .border(1.dp, DividerBorderDark, CircleShape)
                 ) {
                     Icon(
@@ -216,223 +174,144 @@ fun MineMapScreen(
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "GIS MINE CONCESSION MAP",
-                        fontSize = 17.sp,
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
                     )
-                    Text(
-                        text = "Jharia Colliery • Underground Drift Network & Hazards",
-                        fontSize = 11.sp,
-                        color = TextSecondary
-                    )
-                }
-            }
-
-            // Layer Filter Chips
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(DarkCanvas)
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                MapLayerFilter.entries.forEach { filter ->
-                    val isSelected = selectedFilter == filter
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (isSelected) WarmActiveBeige else SubPanelDark)
-                            .border(1.dp, if (isSelected) WarmActiveBeige else DividerBorderDark, RoundedCornerShape(8.dp))
-                            .clickable { selectedFilter = filter }
-                            .padding(horizontal = 10.dp, vertical = 5.dp)
-                    ) {
-                        Text(
-                            text = filter.label,
-                            fontSize = 11.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isSelected) DeepWarmStone else TextPrimary
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(7.dp)
+                                .clip(CircleShape)
+                                .background(if (isGpsLocked) OperationalGreen else WarningOrange)
                         )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (isGpsLocked)
+                                "GPS Active • %.4f° N, %.4f° E (±%.0fm)".format(userLat, userLon, userAccuracy)
+                            else
+                                "Mine Pithead • %.4f° N, %.4f° E".format(userLat, userLon),
+                            fontSize = 11.sp,
+                            color = WarmActiveBeige
+                        )
+                    }
+                }
+
+                // Layer Toggle Chips
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    MapLayerType.entries.forEach { layer ->
+                        val isSelected = selectedLayer == layer
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(if (isSelected) WarmActiveBeige else SubPanelDark)
+                                .border(1.dp, if (isSelected) WarmActiveBeige else DividerBorderDark, RoundedCornerShape(6.dp))
+                                .clickable {
+                                    selectedLayer = layer
+                                    val layerName = if (layer == MapLayerType.SATELLITE) "satellite" else "street"
+                                    webViewInstance?.evaluateJavascript("setMapLayer('$layerName');", null)
+                                }
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = layer.label,
+                                fontSize = 11.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isSelected) DeepWarmStone else TextPrimary
+                            )
+                        }
                     }
                 }
             }
 
-            // Interactive Map Canvas
+            // Real Leaflet / OpenStreetMap WebView
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(0.dp))
-                    .background(Color(0xFF141210))
-                    .pointerInput(Unit) {
-                        detectTransformGestures { _, pan, zoom, _ ->
-                            scale = (scale * zoom).coerceIn(0.6f, 3.5f)
-                            offsetX = (offsetX + pan.x).coerceIn(-1000f, 1000f)
-                            offsetY = (offsetY + pan.y).coerceIn(-1000f, 1000f)
-                        }
-                    }
             ) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    val canvasWidth = size.width
-                    val canvasHeight = size.height
-
-                    val cx = (canvasWidth / 2f) + offsetX
-                    val cy = (canvasHeight / 2f) + offsetY
-
-                    // Draw Geological Strata Grid
-                    val gridSpacing = 60f * scale
-                    val startX = (offsetX % gridSpacing)
-                    val startY = (offsetY % gridSpacing)
-
-                    var curX = startX
-                    while (curX < canvasWidth) {
-                        drawLine(
-                            color = Color(0xFF262320),
-                            start = Offset(curX, 0f),
-                            end = Offset(curX, canvasHeight),
-                            strokeWidth = 1f
-                        )
-                        curX += gridSpacing
-                    }
-
-                    var curY = startY
-                    while (curY < canvasHeight) {
-                        drawLine(
-                            color = Color(0xFF262320),
-                            start = Offset(0f, curY),
-                            end = Offset(canvasWidth, curY),
-                            strokeWidth = 1f
-                        )
-                        curY += gridSpacing
-                    }
-
-                    // Draw Jharia Colliery Concession Boundary Polygon
-                    val p1 = Offset(cx - 320f * scale, cy - 380f * scale)
-                    val p2 = Offset(cx + 340f * scale, cy - 340f * scale)
-                    val p3 = Offset(cx + 380f * scale, cy + 360f * scale)
-                    val p4 = Offset(cx - 280f * scale, cy + 420f * scale)
-
-                    val boundaryPath = Path().apply {
-                        moveTo(p1.x, p1.y)
-                        lineTo(p2.x, p2.y)
-                        lineTo(p3.x, p3.y)
-                        lineTo(p4.x, p4.y)
-                        close()
-                    }
-
-                    drawPath(
-                        path = boundaryPath,
-                        color = Color(0xFF4A3525).copy(alpha = 0.18f)
-                    )
-                    drawPath(
-                        path = boundaryPath,
-                        color = WarmActiveBeige.copy(alpha = 0.5f),
-                        style = Stroke(
-                            width = 2f * scale,
-                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(15f, 10f), 0f)
-                        )
-                    )
-
-                    // Draw Subterranean Drift Haulage Tunnels
-                    val inclineMain = Path().apply {
-                        moveTo(cx + (0.50f - 0.5f) * 600f * scale, cy + (0.15f - 0.5f) * 700f * scale) // Pithead
-                        lineTo(cx + (0.30f - 0.5f) * 600f * scale, cy + (0.25f - 0.5f) * 700f * scale) // Intermediate
-                        lineTo(cx + (0.68f - 0.5f) * 600f * scale, cy + (0.38f - 0.5f) * 700f * scale) // Sector 3
-                        lineTo(cx + (0.42f - 0.5f) * 600f * scale, cy + (0.65f - 0.5f) * 700f * scale) // Face 2
-                        lineTo(cx + (0.75f - 0.5f) * 600f * scale, cy + (0.78f - 0.5f) * 700f * scale) // Sump
-                    }
-
-                    drawPath(
-                        path = inclineMain,
-                        color = Color(0xFF93C5FD).copy(alpha = 0.75f),
-                        style = Stroke(width = 3.5f * scale)
-                    )
-
-                    // Secondary Return Airway
-                    val returnAirway = Path().apply {
-                        moveTo(cx + (0.30f - 0.5f) * 600f * scale, cy + (0.25f - 0.5f) * 700f * scale)
-                        lineTo(cx + (0.15f - 0.5f) * 600f * scale, cy + (0.45f - 0.5f) * 700f * scale)
-                        lineTo(cx + (0.42f - 0.5f) * 600f * scale, cy + (0.65f - 0.5f) * 700f * scale)
-                    }
-
-                    drawPath(
-                        path = returnAirway,
-                        color = WarningOrange.copy(alpha = 0.55f),
-                        style = Stroke(
-                            width = 2f * scale,
-                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 6f), 0f)
-                        )
-                    )
-                }
-
-                // Render Interactive Clickable Pins
-                Box(modifier = Modifier.fillMaxSize()) {
-                    visiblePins.forEach { pin ->
-                        val pinColor = when {
-                            pin.isOfficerBeacon -> WarmActiveBeige
-                            pin.severity == Severity.CRITICAL -> CriticalRed
-                            pin.severity == Severity.HIGH -> WarningOrange
-                            else -> OperationalGreen
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .pointerInput(pin.id) {
-                                    detectTapGestures {
-                                        selectedPin = pin
-                                    }
+                AndroidView(
+                    factory = { ctx ->
+                        WebView(ctx).apply {
+                            layoutParams = ViewGroup.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.MATCH_PARENT
+                            )
+                            webViewClient = object : WebViewClient() {
+                                override fun onPageFinished(view: WebView?, url: String?) {
+                                    super.onPageFinished(view, url)
+                                    view?.evaluateJavascript("map.invalidateSize();", null)
+                                    view?.evaluateJavascript(
+                                        "updatePosition(${userLat}, ${userLon}, ${userAccuracy});",
+                                        null
+                                    )
                                 }
-                        ) {
-                            // Compute pin position
-                            // Map coordinates center
-                            val canvasWidth = 1000f
-                            val canvasHeight = 1200f
-
-                            val posX = (pin.normX - 0.5f) * 600f * scale + offsetX
-                            val posY = (pin.normY - 0.5f) * 700f * scale + offsetY
-
-                            Canvas(
-                                modifier = Modifier
-                                    .size(44.dp)
-                                    .align(Alignment.Center)
-                                    .offset(x = posX.dp, y = posY.dp)
-                                    .clickable { selectedPin = pin }
-                            ) {
-                                // Outer Glow Ring
-                                drawCircle(
-                                    color = pinColor.copy(alpha = 0.35f),
-                                    radius = 18f * scale
-                                )
-                                // Solid Center Pin
-                                drawCircle(
-                                    color = pinColor,
-                                    radius = 9f * scale
-                                )
-                                // Inner White Dot
-                                drawCircle(
-                                    color = Color.White,
-                                    radius = 3.5f * scale
-                                )
                             }
+                            webChromeClient = WebChromeClient()
+                            settings.apply {
+                                javaScriptEnabled = true
+                                domStorageEnabled = true
+                                cacheMode = WebSettings.LOAD_DEFAULT
+                                loadWithOverviewMode = true
+                                useWideViewPort = true
+                                builtInZoomControls = false
+                                displayZoomControls = false
+                            }
+                            loadDataWithBaseURL(
+                                "https://localhost",
+                                buildLeafletHtml(userLat, userLon, userAccuracy),
+                                "text/html",
+                                "UTF-8",
+                                null
+                            )
+                            webViewInstance = this
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+
+                // Loading Indicator while locking GPS
+                if (isLocating) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = 12.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(DarkCanvas.copy(alpha = 0.9f))
+                            .border(1.dp, DividerBorderDark, RoundedCornerShape(20.dp))
+                            .padding(horizontal = 14.dp, vertical = 6.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(14.dp),
+                                color = WarmActiveBeige,
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Locating your position...",
+                                fontSize = 11.sp,
+                                color = TextPrimary
+                            )
                         }
                     }
                 }
 
-                // Map Floating Controls (Zoom in / out / reset)
+                // Map Floating Controls: Zoom In, Zoom Out, Center on User
                 Column(
                     modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 16.dp, bottom = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
+                    // Zoom In
                     IconButton(
-                        onClick = { scale = (scale * 1.3f).coerceAtMost(3.5f) },
+                        onClick = { webViewInstance?.evaluateJavascript("zoomIn();", null) },
                         modifier = Modifier
-                            .size(38.dp)
+                            .size(44.dp)
                             .clip(CircleShape)
                             .background(DarkCanvas)
                             .border(1.dp, DividerBorderDark, CircleShape)
@@ -440,10 +319,11 @@ fun MineMapScreen(
                         Icon(Icons.Default.Add, contentDescription = "Zoom In", tint = WarmActiveBeige)
                     }
 
+                    // Zoom Out
                     IconButton(
-                        onClick = { scale = (scale / 1.3f).coerceAtLeast(0.6f) },
+                        onClick = { webViewInstance?.evaluateJavascript("zoomOut();", null) },
                         modifier = Modifier
-                            .size(38.dp)
+                            .size(44.dp)
                             .clip(CircleShape)
                             .background(DarkCanvas)
                             .border(1.dp, DividerBorderDark, CircleShape)
@@ -451,106 +331,191 @@ fun MineMapScreen(
                         Icon(Icons.Default.Remove, contentDescription = "Zoom Out", tint = WarmActiveBeige)
                     }
 
+                    // Center on My Location Button
                     IconButton(
                         onClick = {
-                            scale = 1.0f
-                            offsetX = 0f
-                            offsetY = 0f
+                            coroutineScope.launch {
+                                isLocating = true
+                                val status = locationHelper.fetchCurrentLocation()
+                                if (status is LocationStatus.Acquired) {
+                                    userLat = status.latitude
+                                    userLon = status.longitude
+                                    userAccuracy = status.accuracyMeters
+                                    isGpsLocked = !status.isSubterraneanFallback
+                                    webViewInstance?.evaluateJavascript(
+                                        "updatePosition(${userLat}, ${userLon}, ${userAccuracy});",
+                                        null
+                                    )
+                                } else {
+                                    webViewInstance?.evaluateJavascript("centerUser();", null)
+                                }
+                                isLocating = false
+                            }
                         },
                         modifier = Modifier
-                            .size(38.dp)
+                            .size(48.dp)
                             .clip(CircleShape)
-                            .background(DarkCanvas)
-                            .border(1.dp, DividerBorderDark, CircleShape)
+                            .background(WarmActiveBeige)
+                            .border(1.5.dp, DeepWarmStone, CircleShape)
                     ) {
-                        Icon(Icons.Default.MyLocation, contentDescription = "Reset", tint = WarmActiveBeige)
-                    }
-                }
-            }
-
-            // Bottom Selected Pin Details Sheet
-            AnimatedVisibility(
-                visible = selectedPin != null,
-                enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
-            ) {
-                if (selectedPin != null) {
-                    val pin = selectedPin!!
-                    val pinColor = when {
-                        pin.isOfficerBeacon -> WarmActiveBeige
-                        pin.severity == Severity.CRITICAL -> CriticalRed
-                        pin.severity == Severity.HIGH -> WarningOrange
-                        else -> OperationalGreen
-                    }
-
-                    GlassCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        contentPadding = 16.dp
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(10.dp)
-                                            .clip(CircleShape)
-                                            .background(pinColor)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = pin.title,
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = TextPrimary
-                                    )
-                                }
-
-                                IconButton(
-                                    onClick = { selectedPin = null },
-                                    modifier = Modifier.size(24.dp)
-                                ) {
-                                    Icon(Icons.Default.Close, contentDescription = "Close", tint = TextSecondary)
-                                }
-                            }
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(text = "Sector: ${pin.sector}", fontSize = 12.sp, color = WarmActiveBeige, fontWeight = FontWeight.Medium)
-                                Text(text = pin.depth, fontSize = 11.sp, color = TextMuted)
-                            }
-
-                            Text(
-                                text = "Telemetry: ${pin.telemetryInfo}",
-                                fontSize = 12.sp,
-                                color = TextSecondary
-                            )
-
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(SubPanelDark)
-                                    .padding(10.dp)
-                            ) {
-                                Text(
-                                    text = "Directive: ${pin.actionDirective}",
-                                    fontSize = 12.sp,
-                                    color = TextPrimary,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                        }
+                        Icon(
+                            Icons.Default.MyLocation,
+                            contentDescription = "My Location",
+                            tint = DeepWarmStone
+                        )
                     }
                 }
             }
         }
     }
+}
+
+/**
+ * Builds the interactive HTML document rendering Leaflet.js with OpenStreetMap / Satellite tiles
+ * and a pulsing beacon marking the exact user position.
+ */
+private fun buildLeafletHtml(
+    initialLat: Double,
+    initialLon: Double,
+    accuracyMeters: Float
+): String {
+    return """
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Mine Officer Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        html, body, #map {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: #1c1917;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        /* Custom pulsating beacon for user location */
+        .user-beacon-container {
+            position: relative;
+            width: 32px;
+            height: 32px;
+        }
+        .user-beacon-pulse {
+            position: absolute;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(37, 99, 235, 0.45);
+            animation: radar-pulse 2s infinite ease-out;
+        }
+        .user-beacon-dot {
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #2563EB;
+            border: 3px solid #FFFFFF;
+            box-shadow: 0 0 12px rgba(0, 0, 0, 0.6);
+        }
+        @keyframes radar-pulse {
+            0% { transform: scale(0.5); opacity: 1; }
+            100% { transform: scale(2.5); opacity: 0; }
+        }
+        .leaflet-popup-content-wrapper {
+            background: #292524;
+            color: #F8F6F0;
+            border: 1px solid #4A3525;
+            border-radius: 10px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.6);
+        }
+        .leaflet-popup-tip {
+            background: #292524;
+        }
+        .leaflet-popup-content {
+            margin: 10px 14px;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        var currentLat = $initialLat;
+        var currentLon = $initialLon;
+        var currentAcc = $accuracyMeters;
+
+        var map = L.map('map', {
+            zoomControl: false,
+            attributionControl: false
+        }).setView([currentLat, currentLon], 16);
+
+        // Standard Street Map Tile Layer (OSM / Google Maps Style)
+        var streetLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            subdomains: ['a','b','c']
+        }).addTo(map);
+
+        // High-Resolution Satellite Tile Layer
+        var satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 18
+        });
+
+        // Pulsating User Location Marker
+        var userIcon = L.divIcon({
+            className: 'user-beacon-container',
+            html: '<div class="user-beacon-pulse"></div><div class="user-beacon-dot"></div>',
+            iconSize: [32, 32],
+            iconAnchor: [16, 16]
+        });
+
+        var userMarker = L.marker([currentLat, currentLon], { icon: userIcon }).addTo(map);
+        userMarker.bindPopup("<b>📍 YOU ARE STANDING HERE</b><br>Mine Safety Officer Position<br><span style='color:#E8DEC8;font-size:11px;'>Lat: " + currentLat.toFixed(5) + "° | Lon: " + currentLon.toFixed(5) + "°</span>").openPopup();
+
+        var accuracyCircle = L.circle([currentLat, currentLon], {
+            radius: currentAcc,
+            color: '#2563EB',
+            fillColor: '#3B82F6',
+            fillOpacity: 0.15,
+            weight: 1
+        }).addTo(map);
+
+        function updatePosition(lat, lon, acc) {
+            currentLat = lat;
+            currentLon = lon;
+            currentAcc = acc;
+            userMarker.setLatLng([lat, lon]);
+            accuracyCircle.setLatLng([lat, lon]);
+            accuracyCircle.setRadius(acc);
+            userMarker.setPopupContent("<b>📍 YOU ARE STANDING HERE</b><br>Mine Safety Officer Position<br><span style='color:#E8DEC8;font-size:11px;'>Lat: " + lat.toFixed(5) + "° | Lon: " + lon.toFixed(5) + "°</span>");
+            map.flyTo([lat, lon], 16, { animate: true, duration: 1.0 });
+        }
+
+        function setMapLayer(type) {
+            if (type === 'satellite') {
+                if (map.hasLayer(streetLayer)) map.removeLayer(streetLayer);
+                satelliteLayer.addTo(map);
+            } else {
+                if (map.hasLayer(satelliteLayer)) map.removeLayer(satelliteLayer);
+                streetLayer.addTo(map);
+            }
+        }
+
+        function zoomIn() { map.zoomIn(); }
+        function zoomOut() { map.zoomOut(); }
+        function centerUser() { map.flyTo([currentLat, currentLon], 16, { animate: true, duration: 1.0 }); }
+
+        setTimeout(function() {
+            map.invalidateSize();
+        }, 300);
+    </script>
+</body>
+</html>
+    """.trimIndent()
 }
